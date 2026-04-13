@@ -14,7 +14,7 @@ const connectDB = async () => {
     mongoose.set('strictQuery', false);
 
     await mongoose.connect(uri);
-    console.log('✅ Connected to MongoDB Atlas: devSpaceHero');
+    console.log('✅ Connected to MongoDB Atlas: Productivity management systems');
   } catch (err) {
     console.error('❌ Failed to connect to MongoDB');
     console.error('Error Details:', err.message);

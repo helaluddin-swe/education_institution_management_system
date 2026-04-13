@@ -1,54 +1,39 @@
 const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
 
-const UserSchema = new Schema({
-  name: {
-    type: String,
-    required: [true, 'Name is required'],
-    trim: true,
-  },
-  email: {
-    type: String,
-    required: [true, 'Email is required'],
-    unique: true, 
-    lowercase: true, 
-    trim: true,
-    match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please fill a valid email address']
-  },
-  password: {
+const UserSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  email: { type: String, required: true, unique: true, lowercase: true },
+  password: { type: String, required: true, select: false },
+  role: { 
     type: String, 
-    required: [true, 'Password is required'],
-    minlength: [6, 'Password must be at least 6 characters'],
+    enum: ['student', 'teacher', 'admin'], 
+    default: 'student' 
   },
-  role: {
+  // CHANGED: Removed required: true because the user is created 
+  // BEFORE the profileId exists in the registration transaction.
+  profileId: {
+    type: mongoose.Schema.Types.ObjectId,
+    refPath: 'roleProfileModel' 
+  },
+  roleProfileModel: {
     type: String,
-    enum: ['user', 'admin'],
-    default: 'user'
-  },
-  stats: {
-    totalTestsTaken: { type: Number, default: 0 },
-    totalSolved: { type: Number, default: 0 },
-    totalCorrect: { type: Number, default: 0 },
-    totalWrong: { type: Number, default: 0 },
-    totalPoints: { type: Number, default: 0 },
-    lastTestDate: { type: Date }
-  },
-  isVerified: {
-    type: Boolean,
-    default: false
+    required: true,
+    enum: ['StudentProfile', 'TeacherProfile', 'AdminProfile']
   }
 }, { 
   timestamps: true,
-  toJSON: {
-    transform(doc, ret) {
-      delete ret.password;
-      delete ret.__v;
-    }
-  }
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
-// Added Index for Leaderboard Performance
-UserSchema.index({ "stats.totalPoints": -1 });
+// Virtual to link the specific profile
+// This allows you to call .populate('profile') instead of 'profileId'
+UserSchema.virtual('profile', {
+  ref: (doc) => doc.roleProfileModel,
+  localField: 'profileId',
+  foreignField: '_id',
+  justOne: true
+});
 
 const User = mongoose.model('User', UserSchema);
-module.exports = User
+module.exports = { User };

@@ -1,136 +1,93 @@
-import React, { useState } from 'react';
-import { useParams, NavLink, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useParams, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
-  Building2, School, Briefcase, ChevronDown, 
-  Home, LayoutGrid, Megaphone, Zap, FileText, 
-  Wrench, DollarSign, LayoutDashboard, Users, 
+  ChevronDown, LayoutDashboard, Users, 
   UserRoundCheck, GraduationCap, Wallet, Bus, 
   FileSpreadsheet, CalendarDays, ClipboardCheck, 
-  Tablets, Users2, Settings, Menu, X,
-  ArrowLeftRight,
-  Target,
-  Receipt,
+  Settings2, User, LogOut, Menu, X,
+  BookOpen, Library, Clock, Award, FileText, CheckCircle2
 } from 'lucide-react';
 
-import { BuildingManagement } from './building-management/BuildingManagement';
-import { SchoolManagement } from './school-management/SchoolDashboard';
-import HotelManagement from './hotel-management/HotelManagement';
-import ProductivityManagement from './productivity-management/ProductivityManagement';
-import InventoryManagement from './inventory-management/InventoryManagement';
-import JobManagement from './job-application-management/JobManagement';
-import PersonalFinanceManagement from './personal-finance-management/PersonalFinanceManagement';
+import StudentDashboard from './student/StudentDashboard';
+import TeacherDashboard from './teacher/TeacherDashboard';
+import AdminDashboard from './admin/AdminDashboard';
+import { useAuth } from '../../context/AuthContext';
 
-const sidebars = {
-  building: [
-    { name: 'Overview', slug: 'building/overview', icon: <Home size={18} /> },
-    { name: 'Units & Inventory', slug: 'building/units', icon: <LayoutGrid size={18} /> },
-    { name: 'Tenants', slug: 'building/tenants', icon: <Users size={18} /> },
-    { name: 'Payments & Accounting', slug: 'building/finance', icon: <DollarSign size={18} /> },
-    { name: 'Maintenance', slug: 'building/maintenance', icon: <Wrench size={18} /> },
-    { name: 'Documents & Leases', slug: 'building/documents', icon: <FileText size={18} /> },
-    { name: 'Utility Tracking', slug: 'building/utilities', icon: <Zap size={18} /> },
-    { name: 'Marketing / Leads', slug: 'building/marketing', icon: <Megaphone size={18} /> },
-  ],
-  school: [
-    { name: 'Dashboard', slug: 'school/overview', icon: <LayoutDashboard size={18} /> },
-    { name: 'Students (1-12)', slug: 'school/students', icon: <Users size={18} /> },
-    { name: 'Faculty & Staff', slug: 'school/teachers', icon: <UserRoundCheck size={18} /> },
-    { name: 'Academic & Exams', slug: 'school/exams', icon: <GraduationCap size={18} /> },
-    { name: 'Fee Management', slug: 'school/fees', icon: <Wallet size={18} /> },
-    { name: 'Attendance', slug: 'school/attendance', icon: <ClipboardCheck size={18} /> },
-    { name: 'Transport Fleet', slug: 'school/transport', icon: <Bus size={18} /> },
-    { name: 'Report Cards', slug: 'school/documents', icon: <FileSpreadsheet size={18} /> },
-    { name: 'School Events', slug: 'school/events', icon: <CalendarDays size={18} /> },
-  ],
-  project: [
-    { name: 'Overview', slug: 'building/overview', icon: <Home size={18} /> },
-    { name: 'Units & Inventory', slug: 'building/units', icon: <LayoutGrid size={18} /> },
-    { name: 'Tenants', slug: 'building/tenants', icon: <Users size={18} /> },
-  ],
-  hotel: [
-    { name: 'Dashboard', slug: 'hotel/overview', icon: <Home size={18} /> },
-    { name: 'Front Desk', slug: 'hotel/front-desk', icon: <LayoutGrid size={18} /> },
-    { name: 'Guests', slug: 'hotel/guests', icon: <Users size={18} /> },
-    { name: 'Rooms', slug: 'hotel/rooms', icon: <DollarSign size={18} /> },
-    { name: 'Deals', slug: 'hotel/deals', icon: <Wrench size={18} /> },
-    { name: 'Rate', slug: 'hotel/rate', icon: <FileText size={18} /> },
-    { name: 'Worker', slug: 'hotel/worker', icon: <Users2 size={18} /> },
-  ],
-  productivity: [
-    { name: 'Dashboard', slug: 'productivity/overview', icon: <Home size={18} /> },
-    { name: 'Tasks', slug: 'productivity/tasks', icon: <LayoutGrid size={18} /> },
-    { name: 'performance', slug: 'productivity/performance', icon: <Users size={18} /> },
-    { name: 'Teams', slug: 'productivity/teams', icon: <Users2 size={18} /> },
-    { name: 'Settings', slug: 'productivity/settings', icon: <Settings size={18} /> },
-  ],
-   inventory: [
-    { name: 'Dashboard', slug: 'inventory/overview', icon: <Home size={18} /> },
-    { name: 'Products', slug: 'inventory/products', icon: <LayoutGrid size={18} /> },
-    { name: 'performance', slug: 'inventory/performance', icon: <Users size={18} /> },
-    { name: 'Teams', slug: 'inventory/teams', icon: <Users2 size={18} /> },
-    { name: 'Settings', slug: 'inventory/settings', icon: <Settings size={18} /> },
-  ],
-  job: [
-    { name: 'Dashboard', slug: 'job/overview', icon: <Home size={18} /> },
-    { name: 'Job List', slug: 'job/jobs', icon: <LayoutGrid size={18} /> },
-    { name: 'Job Status', slug: 'job/status', icon: <LayoutGrid size={18} /> },
-    { name: 'performance', slug: 'job/performance', icon: <Users size={18} /> },
-    { name: 'Teams', slug: 'job/teams', icon: <Users2 size={18} /> },
-    { name: 'Applyed', slug: 'job/admin', icon: <Users2 size={18} /> },
-    { name: 'Settings', slug: 'job/settings', icon: <Settings size={18} /> },
-    { name: 'Campaign', slug: 'job/campaign', icon: <Settings size={18} /> },
-  ],
-  finance: [
-  { 
-    name: 'Overview', 
-    slug: 'finance/overview', 
-    icon: <LayoutDashboard size={18} /> 
-  },
-  { 
-    name: 'Transactions', 
-    slug: 'finance/transactions', 
-    icon: <ArrowLeftRight size={18} /> 
-  },
-  { 
-    name: 'Expenses', // Corrected spelling from 'Expence'
-    slug: 'finance/expenses', 
-    icon: <Receipt size={18} /> 
-  },
-  { 
-    name: 'Goals', 
-    slug: 'finance/goals', 
-    icon: <Target size={18} /> 
-  },
-  { 
-    name: 'Accounts', // Renamed from 'Balance' for better UX (viewing balances per account)
-    slug: 'finance/accounts', 
-    icon: <Wallet size={18} /> 
-  },
-  { 
-    name: 'Settings', 
-    slug: 'finance/settings', 
-    icon: <Settings size={18} /> 
-  },
-],
+// --- ROLE SPECIFIC ROUTES ---
+
+const TEACHER_ROUTES = [
+  { name: 'Dashboard', slug: 'overview', icon: <LayoutDashboard size={18} /> },
+  { name: 'My Classes', slug: 'classes', icon: <Users size={18} /> },
+  { name: 'Attendance Marker', slug: 'attendance', icon: <ClipboardCheck size={18} /> },
+  { name: 'Exams & Grading', slug: 'exams', icon: <GraduationCap size={18} /> },
+  { name: 'Assignments', slug: 'assignments', icon: <FileText size={18} /> },
+  { name: 'Study Material', slug: 'syllabus', icon: <BookOpen size={18} /> },
+  { name: 'Timetable', slug: 'timetable', icon: <Clock size={18} /> },
+  { name: 'Student Progress', slug: 'reports', icon: <Award size={18} /> },
+  { name: 'Notice Board', slug: 'events', icon: <CalendarDays size={18} /> },
+];
+
+const STUDENT_ROUTES = [
+  { name: 'My Dashboard', slug: 'overview', icon: <LayoutDashboard size={18} /> },
+  { name: 'My Subjects', slug: 'subjects', icon: <BookOpen size={18} /> },
+  { name: 'Class Timetable', slug: 'timetable', icon: <Clock size={18} /> },
+  { name: 'Attendance Record', slug: 'attendance', icon: <CheckCircle2 size={18} /> },
+  { name: 'Homework/Tasks', slug: 'assignments', icon: <FileText size={18} /> },
+  { name: 'Exam Results', slug: 'exams', icon: <GraduationCap size={18} /> },
+  { name: 'Fee Payments', slug: 'fees', icon: <Wallet size={18} /> },
+  { name: 'Library Books', slug: 'library', icon: <Library size={18} /> },
+  { name: 'Transport Info', slug: 'transport', icon: <Bus size={18} /> },
+  { name: 'Events & News', slug: 'events', icon: <CalendarDays size={18} /> },
+];
+
+const ADMIN_ROUTES = [
+  { name: 'Admin Dashboard', slug: 'overview', icon: <LayoutDashboard size={18} /> },
+  { name: 'Student Database', slug: 'students', icon: <Users size={18} /> },
+  { name: 'Faculty Management', slug: 'teachers', icon: <UserRoundCheck size={18} /> },
+  { name: 'Academic Setup', slug: 'exams', icon: <GraduationCap size={18} /> },
+  { name: 'Finance & Fees', slug: 'fees', icon: <Wallet size={18} /> },
+  { name: 'Library Manager', slug: 'library', icon: <Library size={18} /> },
+  { name: 'Fleet Management', slug: 'transport', icon: <Bus size={18} /> },
+  { name: 'Institutional Events', slug: 'events', icon: <CalendarDays size={18} /> },
+  { name: 'Reports Center', slug: 'documents', icon: <FileSpreadsheet size={18} /> },
+];
+
+const dashboardRoutes = {
+  student: STUDENT_ROUTES,
+  teacher: TEACHER_ROUTES,
+  admin: ADMIN_ROUTES,
 };
 
+const managementTypes = [
+  { id: 'admin', label: 'Admin Dashboard', icon: <Settings2 size={20} className="text-emerald-400" /> },
+  { id: 'student', label: 'Student Dashboard', icon: <GraduationCap size={20} className="text-emerald-400" /> },
+  { id: 'teacher', label: 'Teacher Dashboard', icon: <User size={20} className="text-emerald-400" /> },
+];
+
 function Dashboard() {
+  const { user, logout, loading } = useAuth();
+  const { mode, page } = useParams(); 
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { mode, page } = useParams();
-  const currentMode = mode || 'building';
 
-  const managementTypes = [
-    { id: 'building', label: 'Building Management', icon: <Building2 size={20} className="text-blue-400" /> },
-    { id: 'school', label: 'School Management', icon: <School size={20} className="text-emerald-400" /> },
-    { id: 'project', label: 'Project Management', icon: <Briefcase size={20} className="text-amber-400" /> },
-    { id: 'hotel', label: 'Hotel Management', icon: <Briefcase size={20} className="text-amber-400" /> },
-    { id: 'productivity', label: 'Productivity Management', icon: <Tablets size={20} className="text-amber-400" /> },
-     { id: 'inventory', label: 'Inventory Management', icon: <Tablets size={20} className="text-amber-400" /> },
-      { id: 'job', label: 'Job Management', icon: <Tablets size={20} className="text-amber-400" /> },
-      { id: 'finance', label: 'Personal Finance Management', icon: <DollarSign size={20} className="text-amber-400" /> },
-  ];
+  const currentMode = mode || user?.role || 'student';
+  const activeType = managementTypes.find(t => t.id === currentMode) || managementTypes[0];
+  const currentPage = page;
+
+  useEffect(() => {
+    if (!loading) {
+      if (!user) {
+        navigate('/login');
+        return;
+      }
+      if (user.role !== 'admin' && mode !== user.role) {
+        navigate(`/dashboard/${user.role}/overview`, { replace: true });
+      }
+    }
+  }, [mode, user, loading, navigate]);
 
   const handleModeChange = (typeId) => {
     setIsDropdownOpen(false);
@@ -139,31 +96,36 @@ function Dashboard() {
   };
 
   const SidebarContent = () => (
-    <>
-      <div className="relative p-4 border-b border-slate-800">
+    <div className="flex flex-col h-full select-none">
+      {/* Workspace Switcher */}
+      <div className="relative p-6">
         <button 
-          onClick={() => setIsDropdownOpen(!isDropdownOpen)} 
-          className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-800/50 border border-slate-700 hover:bg-slate-800 transition-all"
+          onClick={() => user?.role === 'admin' && setIsDropdownOpen(!isDropdownOpen)} 
+          className={`w-full flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10 transition-all duration-300 ${user?.role === 'admin' ? 'hover:bg-white/10 cursor-pointer active:scale-95' : 'cursor-default'}`}
         >
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-500/20">
-              {managementTypes.find(t => t.id === currentMode)?.icon}
+            <div className="p-2.5 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-500/20">
+              {activeType.icon}
             </div>
             <div className="text-left">
-              <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold leading-none mb-1">Workspace</p>
-              <p className="text-sm font-bold text-slate-200 capitalize">{currentMode} Manager</p>
+              <p className="text-[9px] uppercase tracking-[0.2em] text-slate-500 font-black mb-0.5">
+                {user?.role === 'admin' ? 'Workspace' : 'Portal'}
+              </p>
+              <p className="text-sm font-bold text-white leading-none">{activeType.label}</p>
             </div>
           </div>
-          <ChevronDown size={16} className={`text-slate-500 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+          {user?.role === 'admin' && (
+            <ChevronDown size={14} className={`text-slate-500 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+          )}
         </button>
 
-        {isDropdownOpen && (
-          <div className="absolute left-4 right-4 mt-2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden">
+        {isDropdownOpen && user?.role === 'admin' && (
+          <div className="absolute left-6 right-6 mt-3 bg-[#1e293b] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
             {managementTypes.map((type) => (
               <button 
                 key={type.id} 
                 onClick={() => handleModeChange(type.id)} 
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-700 transition-colors text-sm font-medium border-b border-slate-700 last:border-0"
+                className={`w-full flex items-center gap-3 px-5 py-4 hover:bg-white/5 transition-colors text-xs font-bold uppercase tracking-widest border-b border-white/5 last:border-0 ${currentMode === type.id ? 'text-indigo-400' : 'text-slate-300'}`}
               >
                 {type.icon} {type.label}
               </button>
@@ -172,64 +134,54 @@ function Dashboard() {
         )}
       </div>
 
-      <nav className='flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar'>
-        <p className="px-4 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Main Menu</p>
-        {sidebars[currentMode]?.map((item) => (
+      {/* Navigation */}
+      <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto custom-scrollbar">
+        <p className="px-4 py-3 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">General Management</p>
+        {/* FIX: Now correctly uses the role-specific route array */}
+        {dashboardRoutes[currentMode]?.map((item) => (
           <NavLink 
             key={item.slug} 
-            to={`/dashboard/${item.slug}`} 
+            to={`/dashboard/${currentMode}/${item.slug}`} 
             onClick={() => setIsMobileMenuOpen(false)}
             className={({ isActive }) => 
-              `flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-600/20 shadow-[inset_0px_0px_10px_rgba(79,70,229,0.1)]' : 'text-slate-400 hover:bg-slate-800 hover:text-white border border-transparent'}`
+              `flex items-center gap-3 px-5 py-3.5 rounded-2xl transition-all duration-300 group ${
+                isActive 
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' 
+                : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+              }`
             }
           >
-            {item.icon}
-            <span className="font-medium text-sm">{item.name}</span>
+            <span className="transition-transform group-hover:scale-110">{item.icon}</span>
+            <span className="font-bold text-xs uppercase tracking-widest">{item.name}</span>
           </NavLink>
         ))}
       </nav>
-    </>
-  );
 
-  return (
-    <div className='flex h-screen w-full bg-slate-950 text-slate-100 overflow-hidden font-sans relative'>
-      
-      {/* MOBILE HEADER */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 z-30">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-indigo-600 rounded-lg">
-            {managementTypes.find(t => t.id === currentMode)?.icon}
-          </div>
-          <span className="font-bold text-sm capitalize">{currentMode}</span>
-        </div>
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-400">
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+      <div className="p-6 border-t border-white/5">
+        <button 
+          onClick={logout}
+          className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-rose-400 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 transition-all duration-300 font-black text-[10px] uppercase tracking-[0.2em]"
+        >
+          <LogOut size={16} /> Log Out System
         </button>
       </div>
+    </div>
+  );
 
-      {/* DESKTOP SIDEBAR */}
-      <aside className='hidden lg:flex w-72 border-r border-slate-800 bg-slate-900 flex-col z-20'>
+  if (loading) return <div className="h-screen w-full bg-slate-950 flex items-center justify-center text-white font-bold animate-pulse tracking-widest">LOADING WORKSPACE...</div>;
+
+  return (
+    <div className="flex h-screen w-full bg-[#020617] text-slate-100 overflow-hidden relative">
+      <aside className="hidden lg:flex w-80 border-r border-white/5 bg-[#0b0f1a] flex-col z-20">
         <SidebarContent />
       </aside>
 
-      {/* MOBILE SIDEBAR OVERLAY */}
-      {isMobileMenuOpen && (
-        <aside className='fixed inset-0 bg-slate-900 z-40 flex flex-col lg:hidden pt-16 animate-in slide-in-from-left duration-300'>
-          <SidebarContent />
-        </aside>
-      )}
-
-      {/* CONTENT AREA */}
-      <main className='flex-1 flex flex-col overflow-hidden bg-slate-950 mt-16 lg:mt-0'>
-        <div className='flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar'>
-          <div className="max-w-6xl mx-auto">
-            {currentMode === 'building' && <BuildingManagement subPage={page} />}
-            {currentMode === 'school' && <SchoolManagement subPage={page}/>}
-            {currentMode === 'hotel' && <HotelManagement subPage={page}/>}
-            {currentMode === 'productivity' && <ProductivityManagement subPage={page}/>}
-            {currentMode === 'inventory' && <InventoryManagement subPage={page}/>}
-            {currentMode === 'job' && <JobManagement subPage={page}/>}
-            {currentMode === 'finance' && <PersonalFinanceManagement subPage={page}/>}
+      <main className="flex-1 flex flex-col overflow-hidden bg-[#020617]">
+        <div className="flex-1 overflow-y-auto p-4 md:p-10 scroll-smooth">
+          <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700" key={location.pathname}>
+            {currentMode === 'student' && <StudentDashboard subPage={currentPage} />}
+            {currentMode === 'teacher' && <TeacherDashboard subPage={currentPage} />}
+            {currentMode === 'admin' && <AdminDashboard subPage={currentPage} />} 
           </div>
         </div>
       </main>

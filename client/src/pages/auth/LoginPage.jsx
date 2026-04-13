@@ -1,153 +1,156 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppContext } from '../../context/AppContext';
-import axios from 'axios';
-import toast from 'react-hot-toast';
-import { ShieldCheck, Lock, Mail, KeyRound } from 'lucide-react';
+import { ShieldCheck, Lock, Mail, Eye, EyeOff, Loader2, GraduationCap } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [adminSecret, setAdminSecret] = useState('');
-  const [isStaffMode, setIsStaffMode] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isStaffMode, setIsStaffMode] = useState(false); 
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const navigate = useNavigate();
-  const { 
-    backendUrl, 
-    setIsLoggedIn, 
-    setUserData, 
-    setIsAdminAuthenticated 
-  } = useAppContext();
+  const { login, isAuthenticated, user, loading } = useAuth();
+
+  // 1. Enhanced Effect: Watch for user role changes and redirect immediately
+  useEffect(() => {
+    if (!loading && isAuthenticated && user?.role) {
+      navigate(`/dashboard/${user.role}/overview`, { replace: true });
+    }
+  }, [isAuthenticated, user, loading, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-
     try {
-      // Based on your backend: Admin needs 'role' and 'adminSecret'
-      const payload = {
-        email,
-        password,
-        role: isStaffMode ? 'admin' : 'user',
-        ...(isStaffMode && { adminSecret })
-      };
-
-      const response = await axios.post(`${backendUrl}/api/login`, payload);
-
-      if (response.data.success) {
-        const { token, user } = response.data;
-
-        localStorage.setItem('token', token);
-        
-        // If the backend returns an admin role, unlock the context guard
-        if (user.role.toLowerCase() === 'admin') {
-          setIsAdminAuthenticated(true); 
-        }
-
-        setUserData(user);
-        setIsLoggedIn(true);
-
-        toast.success("Login Successful!");
-
-        if (user.role === 'admin' || user.role === 'moderator') {
-          navigate('/admin-control-center');
-        } else {
-          navigate('/');
-        }
+      // 2. Call login from Context
+      const response = await login(email, password);
+      
+      // 3. Fallback: If for some reason the useEffect doesn't trigger, 
+      // we check the response from the login function directly.
+      if (response?.user?.role || user?.role) {
+        const role = response?.user?.role || user?.role;
+        navigate(`/dashboard/${role}/overview`, { replace: true });
       }
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Login failed");
+    } catch (err) {
+      console.error("Login failed:", err);
+      // Error handling is usually managed via toast in AuthContext
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-[#020617] px-4 font-sans">
-      <div className="max-w-md w-full bg-[#0b0f1a] p-8 rounded-[2.5rem] shadow-2xl border border-white/5 relative overflow-hidden">
-        
-        {/* Decorative background glow for Staff Mode */}
-        {isStaffMode && (
-          <div className="absolute -top-24 -right-24 w-48 h-48 bg-amber-600/10 blur-[80px] rounded-full" />
-        )}
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+        <Loader2 className="text-sky-500 animate-spin" size={40} />
+      </div>
+    );
+  }
 
-        <div className="text-center mb-8">
-            <h2 className="text-3xl font-black text-white tracking-tight">
-              {isStaffMode ? 'Staff Login' : 'Welcome Back'}
-            </h2>
-            <p className="text-slate-400 text-sm mt-2">
-              {isStaffMode ? 'Authorized Personnel Only' : 'DestinationBCS: Access your account'}
-            </p>
+  const themeColor = isStaffMode ? 'emerald' : 'sky';
+  const ringClass = isStaffMode ? 'focus:ring-emerald-500/50' : 'focus:ring-sky-500/50';
+  const borderClass = isStaffMode ? 'focus:border-emerald-500' : 'focus:border-sky-500';
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#020617] px-4 font-sans selection:bg-sky-500/30">
+      <div className="max-w-md w-full bg-[#0b0f1a] p-10 rounded-[2.5rem] shadow-2xl border border-white/5 relative overflow-hidden transition-all duration-500">
+        
+        <div className={`absolute -top-24 -right-24 w-64 h-64 rounded-full blur-[100px] transition-colors duration-700 ${isStaffMode ? 'bg-emerald-600/10' : 'bg-sky-600/10'}`} />
+
+        <div className="text-center mb-10 relative z-10">
+          <div className={`inline-flex p-3 rounded-2xl mb-4 bg-white/5 border border-white/10 ${isStaffMode ? 'text-emerald-500' : 'text-sky-500'}`}>
+            {isStaffMode ? <ShieldCheck size={28} /> : <GraduationCap size={28} />}
+          </div>
+          <h2 className="text-3xl font-black text-white tracking-tight">
+            {isStaffMode ? 'Faculty Portal' : 'Student Login'}
+          </h2>
+          <p className="text-slate-500 text-sm mt-2 font-medium">
+            {isStaffMode ? 'Admin & Teacher Authentication' : 'Access your academic records'}
+          </p>
         </div>
         
-        <form onSubmit={handleLogin} className="space-y-5">
-          <div>
-            <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase ml-1 mb-1">
-              <Mail size={14} /> Email
+        <form onSubmit={handleLogin} className="space-y-6 relative z-10">
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
+              <Mail size={12} /> Institutional Email
             </label>
             <input 
               type="email" 
               required
               value={email}
-              className="w-full bg-white/5 border border-white/10 px-4 py-3 rounded-xl text-white focus:ring-2 focus:ring-indigo-600 outline-none transition"
-              placeholder="name@example.com"
+              autoComplete="email"
+              className={`w-full bg-white/5 border border-white/10 px-5 py-4 rounded-2xl text-white placeholder:text-slate-600 outline-none transition-all duration-300 ring-0 focus:ring-4 ${ringClass} ${borderClass}`}
+              placeholder="id@school.edu"
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
 
-          <div>
-            <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase ml-1 mb-1">
-              <Lock size={14} /> Password
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
+              <Lock size={12} /> Security Password
             </label>
-            <input 
-              type="password" 
-              required
-              value={password}
-              className="w-full bg-white/5 border border-white/10 px-4 py-3 rounded-xl text-white focus:ring-2 focus:ring-indigo-600 outline-none transition"
-              placeholder="••••••••"
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <div className="relative group">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                required
+                value={password}
+                autoComplete="current-password"
+                className={`w-full bg-white/5 border border-white/10 px-5 py-4 rounded-2xl text-white placeholder:text-slate-600 outline-none transition-all duration-300 ring-0 focus:ring-4 ${ringClass} ${borderClass}`}
+                placeholder="••••••••"
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button 
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
-          {isStaffMode && (
-            <div className="animate-in fade-in zoom-in-95 duration-300">
-              <label className="flex items-center gap-2 text-xs font-bold text-amber-500 uppercase ml-1 mb-1">
-                <KeyRound size={14} /> Admin Secret Key
-              </label>
-              <input 
-                type="password" 
-                required
-                value={adminSecret}
-                className="w-full bg-amber-500/5 border border-amber-500/20 px-4 py-3 rounded-xl text-amber-400 focus:ring-2 focus:ring-amber-600 outline-none transition"
-                placeholder="Enter secret key"
-                onChange={(e) => setAdminSecret(e.target.value)}
-              />
-            </div>
-          )}
-          
           <button 
             type="submit" 
             disabled={isSubmitting}
-            className={`w-full py-4 rounded-xl font-black text-sm uppercase tracking-widest text-white transition-all duration-200 shadow-lg active:scale-95 ${
-              isStaffMode ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-900/20' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20'
+            className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] text-white transition-all duration-300 shadow-xl active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 ${
+              isStaffMode 
+              ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20' 
+              : 'bg-sky-600 hover:bg-sky-500 shadow-sky-600/20'
             }`}
           >
-            {isSubmitting ? 'Verifying...' : 'Sign In'}
+            {isSubmitting ? (
+              <>
+                <Loader2 className="animate-spin" size={18} /> 
+                Authenticating...
+              </>
+            ) : 'Enter Dashboard'}
           </button>
 
-          <button 
-            type="button"
-            onClick={() => setIsStaffMode(!isStaffMode)}
-            className="w-full text-[10px] text-slate-500 font-bold uppercase hover:text-white transition-colors flex items-center justify-center gap-1"
-          >
-            <ShieldCheck size={12}/> {isStaffMode ? "Switch to Student Login" : "Switch to Staff Login"}
-          </button>
+          <div className="pt-4">
+            <button 
+              type="button"
+              onClick={() => setIsStaffMode(!isStaffMode)}
+              className="w-full group flex flex-col items-center gap-2"
+            >
+              <div className="h-px w-full bg-linear-to-r from-transparent via-white/10 to-transparent mb-2" />
+              <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest group-hover:text-slate-300 transition-colors flex items-center gap-2">
+                <ShieldCheck size={14} className={isStaffMode ? 'text-emerald-500' : 'text-slate-500'}/> 
+                {isStaffMode ? "Switch to Student Login" : "Faculty or Admin Login"}
+              </span>
+            </button>
+          </div>
         </form>
 
-        <p className="mt-8 text-center text-sm text-slate-500">
-          Don't have an account? 
-          <button onClick={() => navigate('/signup')} className="ml-2 text-indigo-400 font-bold hover:underline">Sign up for free</button>
+        <p className="mt-10 text-center text-xs text-slate-500 font-bold uppercase tracking-widest">
+          Not enrolled yet? 
+          <button 
+            onClick={() => navigate('/signup')} 
+            className={`ml-2 transition-colors duration-300 ${isStaffMode ? 'text-emerald-500 hover:text-emerald-400' : 'text-sky-400 hover:text-sky-300'}`}
+          >
+            Apply Now
+          </button>
         </p>
       </div>
     </div>
