@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+/* Ensure FullCalendar elements are visible and styled correctly with Tailwind */
+@layer base {
+  :root {
+    --fc-border-color: #e2e8f0; /* slate-200 */
+    --fc-button-bg-color: #3b82f6; /* blue-600 */
+    --fc-button-border-color: #3b82f6;
+    --fc-button-hover-bg-color: #2563eb;
+    --fc-button-active-bg-color: #1d4ed8;
+  }
+
+  .fc {
+    @apply max-w-full overflow-hidden font-sans;
+    background: white;
+  }
+  
+  .fc-view-harness {
+    @apply bg-white;
+    min-height: 600px; /* Ensure it has height to render */
+  }
+
+  /* Fix for potential z-index issues with your navigation/modals */
+  .fc-scroller {
+    overflow: hidden !important;
+  }
+}
