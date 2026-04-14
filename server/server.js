@@ -13,6 +13,9 @@ const jobRoutes=require("./routes/jobRoutes.js")
 
 const authRoutes = require("./routes/authRoutes.js");
 const admitRoutes = require("./routes/admitRoutes.js");
+const staffRoutes = require("./routes/staffRoutes.js");
+const classScheduleRoutes = require("./routes/classScheduleRoutes.js");
+const attendanceRoutes = require("./routes/attendanceRoutes.js");
 
 
 
@@ -50,6 +53,9 @@ app.get("/", (req, res) => {
 
 app.use("/api/user",authRoutes)
 app.use("/api/students",admitRoutes)
+app.use("/api/staff",staffRoutes)
+app.use("/api/attendance",attendanceRoutes)
+app.use("/api/schedules",classScheduleRoutes)
 
 app.use('/api/jobs',jobRoutes)
 

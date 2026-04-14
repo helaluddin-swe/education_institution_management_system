@@ -26,7 +26,8 @@ const App = () => {
         <Route path="/school" element={<SchoolLandingPage />} />
         <Route path="/student-profile" element={<StudentProfile />} />
         <Route path="/dashboard/admin/students/view/:id" element={<StudentProfileDetails />} />
-        <Route path="/dashboard/admin/teachers/view/:id" element={<TeacherProfileDetails />} />
+       
+        <Route path="/dashboard/admin/staff/view/:id" element={<TeacherProfileDetails />} />
         
         {/* DASHBOARD ROUTES */}
         {/* Redirect base /dashboard to the user's role or 'student' */}

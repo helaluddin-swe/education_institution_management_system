@@ -13,7 +13,9 @@ import EventsCalendar from '../school-management/components/EventsCalendar';
 import AddFeeForm from '../school-management/Fee/AddFeeForm';
 import AddNewStudents from '../school-management/students/AddNewStudents';
 import FeeReceipt from '../school-management/Fee/FeeReceipt';
-import AttendanceTracker from '../school-management/components/AttendanceTraker';
+import AttendanceTracker from './components/AttendanceTraker';
+import MyClass from './class/MyClass';
+
 
 export const TeacherDashboard = ({ subPage }) => {
   // Global States
@@ -99,6 +101,7 @@ export const TeacherDashboard = ({ subPage }) => {
       case 'attendance': return <AttendanceTracker />;
       case 'transport': return <TransportFleet />;
       case 'documents': return <ReportCardSystem />;
+      case 'class': return <MyClass />;
       case 'events': return <EventsCalendar />;
       default: return <AcademicOverview />;
     }

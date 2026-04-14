@@ -1,25 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter as FilterIcon } from 'lucide-react';
 
-const StudentFilter = ({ students, onFilterChange }) => {
+const StudentFilter = ({ students = [], onFilterChange }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGrade, setSelectedGrade] = useState('All');
   const [selectedSection, setSelectedSection] = useState('All');
 
   // --- REFINED FILTER LOGIC ---
   useEffect(() => {
-    const filtered = students.filter(s => {
-      const matchesSearch =
-        s.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.id.toLowerCase().includes(searchTerm.toLowerCase());
+    // 1. Safety check: ensure students is an array
+    const safeStudents = Array.isArray(students) ? students : [];
 
-      const matchesGrade = selectedGrade === 'All' || s.grade.toString() === selectedGrade;
+    const filtered = safeStudents.filter(s => {
+      // 2. Handle potential undefined values for fullName, _id, or rollNumber
+      const name = s.fullName?.toLowerCase() || '';
+      const id = s._id?.toLowerCase() || s.id?.toLowerCase() || '';
+      const roll = s.rollNumber?.toString() || '';
+      const term = searchTerm.toLowerCase();
+
+      const matchesSearch = 
+        name.includes(term) || 
+        id.includes(term) || 
+        roll.includes(term);
+
+      const matchesGrade = selectedGrade === 'All' || s.grade?.toString() === selectedGrade;
       const matchesSection = selectedSection === 'All' || s.section === selectedSection;
 
       return matchesSearch && matchesGrade && matchesSection;
     });
 
-    // Send the filtered list back to the parent component
     onFilterChange(filtered);
   }, [searchTerm, selectedGrade, selectedSection, students, onFilterChange]);
 
@@ -48,9 +57,9 @@ const StudentFilter = ({ students, onFilterChange }) => {
             value={selectedGrade}
             onChange={(e) => setSelectedGrade(e.target.value)}
           >
-            <option value="All" className="bg-slate-950">All Grades</option>
+            <option value="All" className="bg-slate-950 text-white">All Grades</option>
             {[...Array(12)].map((_, i) => (
-              <option key={i + 1} value={(i + 1).toString()} className="bg-slate-950">
+              <option key={i + 1} value={(i + 1).toString()} className="bg-slate-950 text-white">
                 Grade {i + 1}
               </option>
             ))}
@@ -62,10 +71,10 @@ const StudentFilter = ({ students, onFilterChange }) => {
             value={selectedSection}
             onChange={(e) => setSelectedSection(e.target.value)}
           >
-            <option value="All" className="bg-slate-950">All Sections</option>
-            <option value="A" className="bg-slate-950">Section A</option>
-            <option value="B" className="bg-slate-950">Section B</option>
-            <option value="C" className="bg-slate-950">Section C</option>
+            <option value="All" className="bg-slate-950 text-white">All Sections</option>
+            <option value="A" className="bg-slate-950 text-white">Section A</option>
+            <option value="B" className="bg-slate-950 text-white">Section B</option>
+            <option value="C" className="bg-slate-950 text-white">Section C</option>
           </select>
         </div>
 

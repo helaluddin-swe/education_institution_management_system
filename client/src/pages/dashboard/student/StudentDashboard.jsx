@@ -17,6 +17,7 @@ import EventsCalendar from '../school-management/components/EventsCalendar';
 import AddFeeForm from '../school-management/Fee/AddFeeForm';
 import AddNewStudents from '../school-management/students/AddNewStudents';
 import FeeReceipt from '../school-management/Fee/FeeReceipt';
+import MyClass from './class/MyClass';
 
 export const StudentDashboard = ({ subPage }) => {
   // Global States
@@ -93,6 +94,7 @@ export const StudentDashboard = ({ subPage }) => {
           onEdit={openEditModal}
         />;
       case 'teachers': return <FacultyDirectory />;
+      case 'class': return <MyClass />;
       case 'exams': return <div className="text-white p-10">Exam Portal Component Needed</div>; 
       case 'fees': return <FeeManagement students={students} />;
       case 'attendance': return <AttendanceTracker />;

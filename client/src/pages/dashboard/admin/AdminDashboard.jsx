@@ -12,8 +12,13 @@ import AddFeeForm from '../school-management/Fee/AddFeeForm';
 import FeeReceipt from '../school-management/Fee/FeeReceipt';
 import AttendanceTracker from '../school-management/components/AttendanceTraker';
 import StudentProfileList from './components/StudentProfileList';
-import StaffProfileList from './components/StaffProfileList';
+
 import AddNewStudents from './components/AddNewStudent';
+
+import StaffProfileList from './components/staff/StaffProfileList';
+import { useStaff } from '../../../context/StaffContext';
+import AddNewStaff from './components/staff/AddNewStaff';
+import MyClass from './class/MyClass';
 
 const DUMMY_STAFF = [
   { _id: '1', employeeId: 'TCH-2024-01', name: 'Dr. Sarah Jenkins', designation: 'Senior Lecturer', primarySubject: 'Mathematics' },
@@ -21,47 +26,47 @@ const DUMMY_STAFF = [
 ];
 
 export const AdminDashboard = ({ subPage }) => {
-  // 1. Safe Context Destructuring
   const { students = [], fetchStudents, isLoading } = useStudent();
+  const { staffList = [], fetchStaff } = useStaff();
 
+  // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingStudent, setEditingStudent] = useState(null);
   const [lastTransaction, setLastTransaction] = useState(null);
-  const [staffList] = useState(DUMMY_STAFF);
+  
+  // Distinguish between editing types
+  const [editData, setEditData] = useState(null);
+ 
 
   useEffect(() => {
     fetchStudents();
-  }, [fetchStudents]);
+    fetchStaff()
+  }, [fetchStudents,fetchStaff]);
 
-  // 2. FIXED: Safe Derived Data logic using .map() and ensuring students is an array
+  // Derived Roll Number Logic
   const lastRollNumber = useMemo(() => {
     if (!Array.isArray(students) || students.length === 0) return 100;
-    
-    // Extract roll numbers, filter out non-numbers, and find max
-    const rolls = students
-      .map(s => Number(s.rollNumber))
-      .filter(n => !isNaN(n));
-      
+    const rolls = students.map(s => Number(s.rollNumber)).filter(n => !isNaN(n));
     return rolls.length > 0 ? Math.max(...rolls) : 100;
   }, [students]);
 
   // --- HANDLERS ---
   const handleAddFee = (studentId, paymentObject) => {
-    if (!Array.isArray(students)) return;
     const student = students.find(s => (s._id || s.id) === studentId);
-    if (student) {
-      setLastTransaction({ student, payment: paymentObject });
-    }
+    if (student) setLastTransaction({ student, payment: paymentObject });
     setIsModalOpen(false);
   };
 
-  const openEditModal = (student) => {
-    setEditingStudent(student);
+  const openEditModal = (data) => {
+    setEditData(data);
     setIsModalOpen(true);
   };
 
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditData(null);
+  };
+
   const renderContent = () => {
-    // Show loader if fetching and list is empty
     if (isLoading && (!students || students.length === 0)) {
       return (
         <div className="h-[60vh] flex flex-col items-center justify-center text-slate-500 gap-3">
@@ -71,24 +76,32 @@ export const AdminDashboard = ({ subPage }) => {
       );
     }
 
-    // Ensure we pass an array to components even if API fails
     const safeStudents = Array.isArray(students) ? students : [];
+    const safeStaff = Array.isArray(staffList) ? staffList : [];
 
     switch (subPage) {
       case 'overview': return <AcademicOverview />;
-      case 'students':
-        return <StudentProfileList students={safeStudents} onEdit={openEditModal} />;
-      case 'teachers': 
-        return <StaffProfileList staff={staffList} />;
-      case 'fees':
-        return <FeeManagement students={safeStudents} />;
+      case 'students': return <StudentProfileList students={safeStudents} onEdit={openEditModal} />;
+      case 'staff': return <StaffProfileList staff={safeStaff} onEdit={openEditModal} />;
+      case 'fees': return <FeeManagement students={safeStudents} />;
       case 'attendance': return <AttendanceTracker />;
+      case 'class': return <MyClass />;
       case 'transport': return <TransportFleet />;
       case 'documents': return <ReportCardSystem />;
       case 'events': return <EventsCalendar />;
       default: return <AcademicOverview />;
     }
   };
+
+  // Helper to determine button text
+  const getButtonConfig = () => {
+    if (subPage === 'students') return { text: 'New Admission', show: true };
+    if (subPage === 'fees') return { text: 'Collect Fee', show: true };
+    if (subPage === 'staff') return { text: 'Add New Staff', show: true };
+    return { text: '', show: false };
+  };
+
+  const btnConfig = getButtonConfig();
 
   return (
     <div className="space-y-6">
@@ -103,15 +116,12 @@ export const AdminDashboard = ({ subPage }) => {
         </div>
 
         <div className="flex flex-wrap gap-3">
-          {(subPage === 'students' || subPage === 'fees') && (
+          {btnConfig.show && (
             <button
-              onClick={() => {
-                setEditingStudent(null);
-                setIsModalOpen(true);
-              }}
+              onClick={() => { setEditData(null); setIsModalOpen(true); }}
               className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-indigo-600/20 transition-all active:scale-95"
             >
-              <Plus size={16} strokeWidth={3} /> {subPage === 'students' ? 'New Admission' : 'Collect Fee'}
+              <Plus size={16} strokeWidth={3} /> {btnConfig.text}
             </button>
           )}
 
@@ -120,6 +130,12 @@ export const AdminDashboard = ({ subPage }) => {
               <School size={14} className="text-indigo-400" />
               Students: <span className="text-white font-mono">{students?.length || 0}</span>
             </div>
+            {subPage === 'staff' && (
+              <div className="px-4 py-2 bg-slate-900 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-2 animate-in fade-in">
+                <Users size={14} className="text-emerald-400" />
+                Staff: <span className="text-white font-mono">{staffList.length}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -129,25 +145,36 @@ export const AdminDashboard = ({ subPage }) => {
       </div>
 
       {/* --- MODALS --- */}
-      {subPage === 'fees' && isModalOpen && (
-        <AddFeeForm
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          handleOnSubmit={handleAddFee}
-          students={Array.isArray(students) ? students : []}
-        />
-      )}
+      {isModalOpen && (
+        <>
+          {subPage === 'fees' && (
+            <AddFeeForm
+              isOpen={isModalOpen}
+              onClose={handleCloseModal}
+              handleOnSubmit={handleAddFee}
+              students={Array.isArray(students) ? students : []}
+            />
+          )}
 
-      {subPage === 'students' && isModalOpen && (
-        <AddNewStudents
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setEditingStudent(null);
-          }}
-          lastRollNumber={lastRollNumber}
-          editData={editingStudent}
-        />
+          {subPage === 'students' && (
+            <AddNewStudents
+              isOpen={isModalOpen}
+              onClose={handleCloseModal}
+              lastRollNumber={lastRollNumber}
+              editData={editData}
+              
+            
+            />
+          )}
+
+          {subPage === 'staff' && (
+            <AddNewStaff
+              isOpen={isModalOpen}
+              onClose={handleCloseModal}
+              editData={editData}
+            />
+          )}
+        </>
       )}
 
       {lastTransaction && (

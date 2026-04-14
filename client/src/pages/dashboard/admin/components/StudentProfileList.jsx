@@ -7,23 +7,21 @@ import {
 } from 'lucide-react';
 import StudentFilter from '../../school-management/components/Filter';
 import ActionDropdown from './ActionDropDown';
-
 import { useNavigate } from 'react-router-dom';
+import { useStudent } from '../../../../context/StudentContext';
 
-
-const StudentProfileList = ({ students, setStudents, onEdit }) => {
-  const navigate=useNavigate()
-  // Sync filtered data when the master students list changes
+const StudentProfileList = ({ onEdit }) => {
+  const navigate = useNavigate();
+  const { students, expelStudent } = useStudent();
   const [filteredData, setFilteredData] = useState(students);
 
   useEffect(() => {
     setFilteredData(students);
   }, [students]);
 
-  // --- HANDLERS ---
-  const handleDeleteStudent = (id) => {
-    if (window.confirm("Are you sure you want to delete this student record?")) {
-      setStudents(prev => prev.filter(s => s.id !== id));
+  const handleDeleteStudent = async (id) => {
+    if (window.confirm("Are you sure you want to delete this student record? This action cannot be undone.")) {
+      await expelStudent(id);
     }
   };
 
@@ -75,19 +73,27 @@ const StudentProfileList = ({ students, setStudents, onEdit }) => {
             </thead>
             <tbody className="divide-y divide-slate-800/50">
               {filteredData.map((student) => (
-                <tr onClick={()=>navigate(`/dashboard/admin/students/view/${student.id}`)} key={student.id} className="group hover:bg-slate-800/30 transition-colors">
+                <tr 
+                  key={student._id || student.id} 
+                  className="group hover:bg-slate-800/30 transition-colors cursor-pointer"
+                  onClick={(e) => {
+                    if (e.target.closest('button')) return;
+                    navigate(`/dashboard/admin/students/view/${student._id || student.id}`);
+                  }}
+                >
                   {/* Basic Info */}
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center text-indigo-400 font-bold group-hover:border-indigo-500/50 transition-all shadow-inner uppercase">
-                        {student.fullName.charAt(0)}
+                        {student.fullName?.charAt(0)}
                       </div>
                       <div>
                         <div className="text-sm font-bold text-slate-200 group-hover:text-white transition-colors">{student.fullName}</div>
                         <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
-                          <span className="text-indigo-500/80">ID: {student.id}</span>
+                          {/* UPDATED: rollNo instead of rollNumber */}
+                          <span className="text-indigo-500/80">ROLL: {student.rollNo || 'N/A'}</span>
                           <span className="text-slate-700">•</span>
-                          <span>{student.personal?.bloodGroup}</span>
+                          <span>{student.personal?.bloodGroup || 'N/A'}</span>
                         </div>
                       </div>
                     </div>
@@ -96,10 +102,13 @@ const StudentProfileList = ({ students, setStudents, onEdit }) => {
                   {/* Class / Contact */}
                   <td className="p-4">
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-slate-300 font-medium">Grade {student.grade}-{student.section}</span>
+                      {/* UPDATED: currentClass instead of grade */}
+                      <span className="text-xs text-slate-300 font-medium">
+                        Class {student.currentClass || 'N/A'} - {student.section || 'A'}
+                      </span>
                       <div className="flex items-center gap-1 text-[10px] text-slate-500">
                         <MapPin size={10} className="text-slate-600" />
-                        <span className="truncate max-w-30">{student.personal?.address}</span>
+                        <span className="truncate max-w-30">{student.personal?.address || 'No Address'}</span>
                       </div>
                     </div>
                   </td>
@@ -108,10 +117,10 @@ const StudentProfileList = ({ students, setStudents, onEdit }) => {
                   <td className="p-4">
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-1.5 text-xs text-slate-300 font-medium">
-                        {student.guardian?.name}
+                        {student.guardian?.name || 'N/A'}
                       </div>
                       <div className="flex items-center gap-1 text-[10px] text-slate-500">
-                        <Phone size={10} className="text-indigo-500/70" /> {student.guardian?.phone}
+                        <Phone size={10} className="text-indigo-500/70" /> {student.guardian?.phone || 'No Phone'}
                       </div>
                     </div>
                   </td>
@@ -121,18 +130,19 @@ const StudentProfileList = ({ students, setStudents, onEdit }) => {
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
-                          <TrendingUp size={10} /> GPA {student.academics?.lastGPA}
+                          <TrendingUp size={10} /> GPA {student.academics?.lastGPA || '0.00'}
                         </div>
                         <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-400">
-                          <CalendarCheck size={10} /> {student.academics?.attendance}
+                          <CalendarCheck size={10} /> {student.academics?.attendance || '0%'}
                         </div>
                       </div>
-                      <span className={`inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${student.status === 'Active'
-                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                        : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                      <span className={`inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
+                        student.status === 'Active'
+                          ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                          : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
                         }`}>
                         <span className={`w-1 h-1 rounded-full ${student.status === 'Active' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                        {student.status}
+                        {student.status || 'Active'}
                       </span>
                     </div>
                   </td>
@@ -145,8 +155,7 @@ const StudentProfileList = ({ students, setStudents, onEdit }) => {
                         {
                           label: 'View Profile',
                           icon: <Eye size={16} />,
-                          // Use navigate to go to the dynamic route
-                          onClick: (s) => navigate(`/dashboard/admin/students/view/${s.id || s._id}`)
+                          onClick: (s) => navigate(`/dashboard/admin/students/view/${s._id || s.id}`)
                         },
                         {
                           label: 'Edit Student',

@@ -11,11 +11,7 @@ exports.protect = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    /**
-     * CRITICAL CHANGE: 
-     * In the School Management System, we use 'profileId' with a refPath.
-     * Ensure this matches your User Schema field name.
-     */
+    // Fetch user and populate their specific profile (Teacher/Student/Admin details)
     const user = await User.findById(decoded.id)
       .select("-password")
       .populate('profileId'); 
@@ -24,7 +20,7 @@ exports.protect = async (req, res, next) => {
       return res.status(401).json({ success: false, message: "User session not found." });
     }
 
-    req.user = user;
+    req.user = user; // This makes req.user available in your Schedule Controller
     next();
   } catch (error) {
     console.error("Auth Middleware Error:", error.message);
@@ -33,7 +29,6 @@ exports.protect = async (req, res, next) => {
 };
 
 // 2. Role-Based Authorization
-// Usage: authorize('admin', 'teacher')
 exports.authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
@@ -46,7 +41,7 @@ exports.authorize = (...roles) => {
   };
 };
 
-// 3. Shorthand for Admin only (Optional helper)
+// 3. Shorthand for Admin only
 exports.adminOnly = (req, res, next) => {
   if (req.user && req.user.role === 'admin') {
     next();
