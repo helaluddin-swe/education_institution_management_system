@@ -2,9 +2,10 @@ const bcrypt = require("bcryptjs");
 const { StudentProfile } = require("../models/ProfileModel");
 const { User } = require("../models/AuthModel");
 
+// @desc    Admit new student, create User account & Finance profile
+// @route   POST /api/students/admit
 exports.admitStudent = async (req, res) => {
   try {
-    // Destructure based on the corrected Frontend studentEntry object
     const { fullName, currentClass, section, rollNo, personal, guardian } = req.body;
 
     // 1. Validation
@@ -14,7 +15,6 @@ exports.admitStudent = async (req, res) => {
     }
 
     // 2. Create the User (Login Credentials)
-    // FIX: Use rollNo (the variable you destructured above)
     const hashedPassword = await bcrypt.hash(`Student@${rollNo}`, 10);
 
     const newUser = new User({
@@ -27,12 +27,11 @@ exports.admitStudent = async (req, res) => {
 
     const savedUser = await newUser.save();
 
-    // 3. Create the Student Profile
-    // Logic: We need a unique studentId. Usually generated like 'STD-2024-001'
+    // 3. Create Student Profile with Finance structure initialized
     const studentIdGen = `STD-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const newStudent = new StudentProfile({
-      userId: savedUser._id, // LINK TO THE USER WE JUST CREATED
+      userId: savedUser._id,
       studentId: studentIdGen,
       fullName,
       currentClass,
@@ -40,6 +39,11 @@ exports.admitStudent = async (req, res) => {
       rollNo,
       personal,
       guardian,
+      finance: {
+        paymentHistory: [],
+        reservedBalance: 0,
+        totalOutstandingDebt: 0
+      }
     });
 
     const savedProfile = await newStudent.save();
@@ -59,6 +63,7 @@ exports.admitStudent = async (req, res) => {
   }
 };
 
+// @desc    Get all students with populated user data
 exports.getStudentsList = async (req, res) => {
   try {
     const students = await StudentProfile.find()
@@ -70,6 +75,7 @@ exports.getStudentsList = async (req, res) => {
   }
 };
 
+// @desc    Update profile and sync changes to User account
 exports.updateStudentProfile = async (req, res) => {
   try {
     const studentId = req.params.id;
@@ -78,21 +84,19 @@ exports.updateStudentProfile = async (req, res) => {
     const profile = await StudentProfile.findById(studentId);
     if (!profile) return res.status(404).json({ message: "Student not found" });
 
-    // 1. Update User Credentials if Name or Email changed
+    // 1. Sync User Credentials if critical info changed
     if (updateData.fullName || updateData.personal?.email) {
       await User.findByIdAndUpdate(profile.userId, {
-        name: updateData.fullName,
-        email: updateData.personal?.email,
+        name: updateData.fullName || profile.fullName,
+        email: updateData.personal?.email || profile.personal.email,
       });
     }
 
     // 2. Update Student Profile
-    // Logic Fix: Since we mapped the keys in the frontend already, 
-    // we don't need to manually remap 'grade' to 'currentClass' here again.
     const updatedProfile = await StudentProfile.findByIdAndUpdate(
       studentId,
       { $set: updateData },
-      { new: true, runValidators: true }
+      { returnDocument: true, runValidators: true }
     );
 
     res.json({ success: true, data: updatedProfile });
@@ -101,12 +105,91 @@ exports.updateStudentProfile = async (req, res) => {
   }
 };
 
+// @desc    Record a payment and update debt/vault
+exports.recordPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const paymentData = req.body;
+
+    const student = await StudentProfile.findById(id);
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    // ❌ Prevent duplicate month entry
+    const exists = student.finance.paymentHistory.find(
+      p => p.month === paymentData.month && p.year === paymentData.year
+    );
+
+    if (exists) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment for this month already exists"
+      });
+    }
+
+    let paidAmount = Number(paymentData.paidAmount || 0);
+    let totalBilled = Number(paymentData.totalBilled || 0);
+
+    let status = "Pending";
+    let extra = 0;
+
+    if (paidAmount >= totalBilled) {
+      status = "Paid";
+
+      if (paidAmount > totalBilled) {
+        extra = paidAmount - totalBilled;
+        student.finance.reservedBalance += extra;
+        paidAmount = totalBilled;
+      }
+
+    } else if (paidAmount > 0) {
+      status = "Partial";
+    }
+
+    const newPayment = {
+      ...paymentData,
+      paidAmount,
+      totalBilled,
+      status
+    };
+
+    student.finance.paymentHistory.push(newPayment);
+
+    // 🔥 RECALCULATE
+    student.finance.totalBilledToDate += totalBilled;
+
+    const totalPaid = student.finance.paymentHistory.reduce(
+      (sum, p) => sum + p.paidAmount,
+      0
+    );
+
+    student.finance.totalOutstandingDebt =
+      student.finance.totalBilledToDate - totalPaid;
+
+    await student.save();
+
+    // 🔥 SOCKET.IO EMIT
+    const io = req.app.get("io");
+    io.emit("paymentUpdated", student);
+
+    res.status(200).json({
+      success: true,
+      data: student, // 🔥 IMPORTANT (send full student)
+      extraReserved: extra
+    });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Remove Student and associated User account
 exports.expelStudent = async (req, res) => {
   try {
     const profile = await StudentProfile.findById(req.params.id);
     if (!profile) return res.status(404).json({ message: "Student not found" });
 
-    // Remove both the login user and the profile
     await User.findByIdAndDelete(profile.userId);
     await StudentProfile.findByIdAndDelete(req.params.id);
 

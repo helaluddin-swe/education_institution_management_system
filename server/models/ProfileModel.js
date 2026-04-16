@@ -1,5 +1,43 @@
-const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+const mongoose = require('mongoose');
+const Schema =mongoose.Schema
+
+
+
+const PaymentSchema = new mongoose.Schema({
+  month: { type: String, required: true },
+  year: { type: Number, required: true },
+
+  tuitionFee: { type: Number, default: 0, min: 0 },
+  examFee: { type: Number, default: 0, min: 0 },
+  transportFee: { type: Number, default: 0, min: 0 },
+  libraryFee: { type: Number, default: 0, min: 0 },
+  labFee: { type: Number, default: 0, min: 0 },
+  others: { type: Number, default: 0, min: 0 },
+
+  totalBilled: { type: Number, default: 0 },
+  paidAmount: { type: Number, default: 0 },
+  balance: { type: Number, default: 0 },
+
+  status: {
+    type: String,
+    enum: ['Paid', 'Pending', 'Partial', 'Waived'],
+    default: 'Pending'
+  }
+}, { timestamps: true });
+
+// 🔥 AUTO CALCULATION
+PaymentSchema.pre("save", function (next) {
+  this.totalBilled =
+    this.tuitionFee +
+    this.examFee +
+    this.transportFee +
+    this.libraryFee +
+    this.labFee +
+    this.others;
+
+  this.balance = this.totalBilled - this.paidAmount;
+  next();
+});
 
 const StudentProfileSchema = new mongoose.Schema(
   {
@@ -13,7 +51,7 @@ const StudentProfileSchema = new mongoose.Schema(
     currentClass: { type: String, required: true },
     section: { type: String, default: "A" },
     rollNo: { type: Number },
-    profilePicture: { type: String, default: "" }, // Added field
+    profilePicture: { type: String, default: "" },
 
     personal: {
       dob: Date,
@@ -21,7 +59,7 @@ const StudentProfileSchema = new mongoose.Schema(
       bloodGroup: String,
       address: String,
       email: String,
-      phone: String, // Student's personal phone if applicable
+      phone: String,
     },
 
     guardian: {
@@ -32,23 +70,43 @@ const StudentProfileSchema = new mongoose.Schema(
       email: String,
     },
 
-    // NEW: Academic Data for Charts
     academics: {
       attendance: { type: String, default: "0%" },
       lastGPA: { type: String, default: "0.00" },
       subjectGrades: [
         {
           subject: String,
-          score: Number, // for Radar Chart
+          score: Number,
           grade: String,
         },
       ],
       progressHistory: [
         {
           month: String,
-          rate: Number, // for Area Chart
+          rate: Number,
         },
       ],
+    },
+
+    // --- INTEGRATED PAYMENT LOGIC ---
+    finance: {
+      paymentHistory: [PaymentSchema],
+      
+      // The 'Vault' for overpaid money (Advanced Logic)
+      reservedBalance: { 
+        type: Number, 
+        default: 0 
+      },
+      
+      // Summary fields for Dashboard performance
+      totalOutstandingDebt: { 
+        type: Number, 
+        default: 0 
+      },
+      totalBilledToDate: { 
+        type: Number, 
+        default: 0 
+      }
     },
 
     achievements: [
@@ -67,6 +125,8 @@ const StudentProfileSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+
+
 
 /**
  * TEACHER PROFILE SCHEMA

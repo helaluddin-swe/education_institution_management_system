@@ -19,6 +19,7 @@ import StaffProfileList from './components/staff/StaffProfileList';
 import { useStaff } from '../../../context/StaffContext';
 import AddNewStaff from './components/staff/AddNewStaff';
 import MyClass from './class/MyClass';
+import StudentFeesManagement from './fees/FeesManagement';
 
 const DUMMY_STAFF = [
   { _id: '1', employeeId: 'TCH-2024-01', name: 'Dr. Sarah Jenkins', designation: 'Senior Lecturer', primarySubject: 'Mathematics' },
@@ -83,7 +84,7 @@ export const AdminDashboard = ({ subPage }) => {
       case 'overview': return <AcademicOverview />;
       case 'students': return <StudentProfileList students={safeStudents} onEdit={openEditModal} />;
       case 'staff': return <StaffProfileList staff={safeStaff} onEdit={openEditModal} />;
-      case 'fees': return <FeeManagement students={safeStudents} />;
+      case 'fees': return <StudentFeesManagement students={safeStudents} />;
       case 'attendance': return <AttendanceTracker />;
       case 'class': return <MyClass />;
       case 'transport': return <TransportFleet />;

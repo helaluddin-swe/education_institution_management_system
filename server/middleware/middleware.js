@@ -4,27 +4,42 @@ const { User } = require("../models/AuthModel");
 // 1. Protect Middleware (Authentication)
 exports.protect = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
+    if (typeof next !== "function") {
+      console.error("❌ next is not a function");
+      return res.status(500).json({ message: "Middleware error" });
+    }
+
+    const token = req.headers.authorization?.split(" ")[1];
+
     if (!token) {
-      return res.status(401).json({ success: false, message: "No token provided, access denied." });
+      return res.status(401).json({
+        success: false,
+        message: "No token provided",
+      });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Fetch user and populate their specific profile (Teacher/Student/Admin details)
     const user = await User.findById(decoded.id)
       .select("-password")
-      .populate('profileId'); 
+      .populate("profileId");
 
     if (!user) {
-      return res.status(401).json({ success: false, message: "User session not found." });
+      return res.status(401).json({
+        success: false,
+        message: "User not found",
+      });
     }
 
-    req.user = user; // This makes req.user available in your Schedule Controller
-    next();
+    req.user = user;
+
+    next(); // ✅ SAFE NOW
   } catch (error) {
-    console.error("Auth Middleware Error:", error.message);
-    res.status(401).json({ success: false, message: "Session expired or invalid token." });
+    console.error("Auth Error:", error.message);
+    return res.status(401).json({
+      success: false,
+      message: "Invalid token",
+    });
   }
 };
 
